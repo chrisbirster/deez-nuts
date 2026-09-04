@@ -1,0 +1,72 @@
+name: Build open trivia nuts
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/build_open_trivia_qa.py"
+      - "sources/open-trivia-qa.md"
+      - ".github/workflows/build-open-trivia-nuts.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate decks
+        run: python tools/build_open_trivia_qa.py
+
+      - name: Validate generated .nut files
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          generated = sorted(Path("nuts").glob("*/.open-trivia-qa-generated"))
+          assert generated, "no generated trivia decks found"
+
+          for marker in generated:
+              deck_dir = marker.parent
+              nut = deck_dir / f"{deck_dir.name}.nut"
+              assert nut.exists(), f"missing {nut}"
+              lines = [line for line in nut.read_text(encoding="utf-8").splitlines() if line.strip()]
+              assert 2 <= len(lines) <= 501, f"{nut}: expected 1-500 notes, got {len(lines)-1}"
+              header = json.loads(lines[0])
+              assert header == {
+                  "kind": "deck",
+                  "format": "deez.nut",
+                  "version": 2,
+                  "name": header["name"],
+              }
+              for line in lines[1:]:
+                  note = json.loads(line)
+                  assert note["kind"] == "note"
+                  assert note["note_type"] == "basic"
+                  assert len(note["fields"]) == 2
+                  json.loads(note["tags_json"])
+          print(f"validated {len(generated)} generated decks")
+          PY
+
+      - name: Commit generated decks
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nuts sources/open-trivia-qa-catalog.json sources/open-trivia-qa-summary.md
+          if git diff --cached --quiet; then
+            echo "Generated decks are already current."
+            exit 0
+          fi
+          git commit -m "Generate open trivia nut volumes"
+          git push
