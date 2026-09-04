@@ -18,9 +18,8 @@ jobs:
         run: python3 tools/generate_study_decks.py
       - name: Commit generated deck content
         run: |
-          rm -f tools/generate_study_decks.py
+          rm -rf tools
           rm -f .github/workflows/generate-study-decks.yml
-          rmdir tools 2>/dev/null || true
           rmdir .github/workflows 2>/dev/null || true
           rmdir .github 2>/dev/null || true
           git config user.name "github-actions[bot]"
