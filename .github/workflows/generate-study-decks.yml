@@ -1,0 +1,30 @@
+name: Generate study decks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/generate_study_decks.py
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate and validate decks
+        run: python3 tools/generate_study_decks.py
+      - name: Commit generated deck content
+        run: |
+          rm -f tools/generate_study_decks.py
+          rm -f .github/workflows/generate-study-decks.yml
+          rmdir tools 2>/dev/null || true
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add 500-card study decks"
+          git push
