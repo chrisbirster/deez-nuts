@@ -1,0 +1,28 @@
+name: Checksum MongoDB nut
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/checksum-mongodb-now
+
+permissions:
+  contents: write
+
+jobs:
+  checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write checksum
+        run: sha256sum nuts/mongodb/mongodb.nut > nuts/mongodb/SHA256SUMS
+      - name: Commit checksum and cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nuts/mongodb/SHA256SUMS
+          git rm .github/workflows/checksum-mongodb.yml .github/checksum-mongodb-now
+          git commit -m "Add MongoDB nut checksum"
+          git push
