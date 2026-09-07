@@ -1,0 +1,26 @@
+name: Inspect staged MongoDB deck data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/inspect-mongodb-now
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode staged payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d tools/study_data/mongodb.b64 | gzip -dc > /tmp/mongodb.decoded
+          echo "bytes=$(wc -c < /tmp/mongodb.decoded)"
+          echo "lines=$(wc -l < /tmp/mongodb.decoded)"
+          file /tmp/mongodb.decoded
+          echo '===== first 40 lines ====='
+          sed -n '1,40p' /tmp/mongodb.decoded
